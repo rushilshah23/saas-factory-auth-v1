@@ -1,7 +1,7 @@
 from .utils import Utils
 from .helpers import (
     RegisterEmailRequest,
-    # LoginEmailRequest,
+    LoginEmailRequest,
     # VerifyEmailRequest,
     # ForgotPasswordRequest,
     # ResetPasswordRequest,
@@ -16,23 +16,27 @@ class Service:
     async def register(data: RegisterEmailRequest, session: Session) -> APIResponse:
         if data.password != data.confirm_password:
             return APIResponse.error("Passwords do not match", status=400)
-        return await Repository.register(data, session)
+        repository_response = await Repository.register(data, session)
+        return APIResponse(status=repository_response.status,
+                            message=repository_response.message,
+                            data=repository_response.data)
 
-    # @staticmethod
-    # async def login(data: LoginEmailRequest, session: Session) -> APIResponse:
-    #     user = await Repository.get_user_by_email(data.email, session)
-    #     if not user:
-    #         return APIResponse.error("User not found", status=404)
+    @staticmethod
+    async def login(data: LoginEmailRequest, session: Session) -> APIResponse:
+        email_user_repository_response = await Repository.get_user_by_email(data.email, session)
+        email_user = email_user_repository_response.data
+        if not email_user:
+            return APIResponse.error(f"Email user {data.email} not found", status=404)
             
-    #     if not Utils.verify_password(data.password, user.password_hash):
-    #         return APIResponse.error("Invalid credentials", status=401)
+        if not Utils.verify_password(data.password, email_user.password):
+            return APIResponse.error("Invalid credentials", status=401)
             
-    #     if not user.email_verified:
-    #         return APIResponse.error("Email not verified", status=403)
+        if not email_user.email_verified:
+            return APIResponse.error("Email not verified", status=403)
             
-    #     token = Utils.generate_token({"sub": user.email})
-    #     await Repository.update_last_login(user.id, session)
-    #     return APIResponse.success({"access_token": token, "token_type": "bearer"})
+        token = Utils.generate_token({"sub": email_user.email})
+        await Repository.update_last_login(email_user.id, session)
+        return APIResponse.success({"access_token": token, "token_type": "bearer"})
 
     # @staticmethod
     # async def verify_email(data: VerifyEmailRequest, session: Session) -> APIResponse:

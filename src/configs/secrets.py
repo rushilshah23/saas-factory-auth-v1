@@ -12,6 +12,13 @@ class SecretUtils:
         ALGORITHM="ALGORITHM"
         DB_URI="DB_URI"
 
+        EMAIL_HOST="EMAIL_HOST"
+        EMAIL_PORT="EMAIL_PORT"
+        EMAIL_USER="EMAIL_USER"
+        EMAIL_PASSWORD="EMAIL_PASSWORD"
+        EMAIL_FROM_NAME="EMAIL_FROM_NAME"
+        EMAIL_VERIFICATION_BASE_URL="EMAIL_VERIFICATION_BASE_URL"
+
     @staticmethod
     def collect_secrets():
         for SECRET in SecretUtils.SECRETS:

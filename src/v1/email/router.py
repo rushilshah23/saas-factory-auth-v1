@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from .helpers import (
     RegisterEmailRequest,
-    # LoginEmailRequest,
+    LoginEmailRequest,
     # VerifyEmailRequest,
     # ForgotPasswordRequest,
     # ResetPasswordRequest,
@@ -22,13 +22,13 @@ async def register(request: RegisterEmailRequest, session: SessionDependency) ->
         content=service_response.to_dict()
     )
 
-# @router.post("/login")
-# async def login(request: LoginEmailRequest, session: SessionDependency) -> APIResponse:
-#     service_response = await Service.login(request, session)
-#     return JSONResponse(
-#         status_code=service_response.status,
-#         content=service_response.to_dict()
-#     )
+@router.post("/login")
+async def login(request: LoginEmailRequest, session: SessionDependency) -> APIResponse:
+    service_response = await Service.login(request, session)
+    return JSONResponse(
+        status_code=service_response.status,
+        content=service_response.to_dict()
+    )
 
 # @router.post("/verify-email")
 # async def verify_email(request: VerifyEmailRequest, session: SessionDependency) -> APIResponse:
