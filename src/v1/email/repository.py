@@ -9,7 +9,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, delete
 from src.v1.helpers import UserAuthType
 from typing import Optional
-from src.configs.secrets import SecretUtils
 
 
 class Repository:
@@ -55,23 +54,55 @@ class Repository:
             session.add(new_email_user)
             await session.commit()
 
-            base_url = SecretUtils.get_secret_value(SecretUtils.SECRETS.EMAIL_VERIFICATION_BASE_URL)
-            verification_link = f"{base_url}?email={data.email}&token={new_email_user.id}"
 
-            await Utils.send_email(
-                subject="Verify your email",
-                recipient=data.email,
-                body=f"Welcome to our app!\n\nPlease verify your email by clicking the following link:\n{verification_link}"
-            )
 
             return RepositoryResponse(
                 status=201,
-                message="Verify the email to complete registration through the link sent to your email",
-                data={"email": new_email_user.email}
+                message="User data saved successfully",
+                data={"email": new_email_user.email, "user_id": new_email_user.user_id}
             )
 
         except Exception as e:
             await session.rollback()  # <- important
+            return RepositoryResponse(
+                status=500,
+                message=f"An error occurred: {str(e)}"
+            )
+        
+    @staticmethod
+    async def verify_user_email(email: str, user_id: str, session: AsyncSession) -> RepositoryResponse:
+        try:
+            result = await session.execute(
+                select(EmailUser).where(
+                    EmailUser.email == email,
+                    EmailUser.user_id == user_id
+                )
+            )
+            email_user = result.scalar_one_or_none()
+
+            if not email_user:
+                return RepositoryResponse(
+                    status=404,
+                    message="Email user not found",
+                    data=None
+                )
+            if email_user.email_verified:
+                return RepositoryResponse(
+                    status=400,
+                    message="Email already verified",
+                    data={"email": email_user.email, "user_id": email_user.user_id}
+                )
+            email_user.email_verified = True
+            await session.commit()
+
+            return RepositoryResponse(
+                status=200,
+                message="Email verified successfully",
+                data={"email": email_user.email, "user_id": email_user.user_id}
+            )
+
+        except Exception as e:
+            await session.rollback()
             return RepositoryResponse(
                 status=500,
                 message=f"An error occurred: {str(e)}"

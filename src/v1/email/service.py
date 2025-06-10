@@ -1,4 +1,5 @@
 from .utils import Utils
+from src.utils import Utils as AppUtils
 from .helpers import (
     RegisterEmailRequest,
     LoginEmailRequest,
@@ -10,6 +11,7 @@ from .helpers import (
 from src.helpers.response import APIResponse
 from .repository import Repository
 from sqlmodel import Session
+from src.configs.secrets import SecretUtils
 
 class Service:
     @staticmethod
@@ -17,6 +19,33 @@ class Service:
         if data.password != data.confirm_password:
             return APIResponse.error("Passwords do not match", status=400)
         repository_response = await Repository.register(data, session)
+        if repository_response.status == 201:
+            base_url = SecretUtils.get_secret_value(SecretUtils.SECRETS.EMAIL_VERIFICATION_BASE_URL)
+            token = await AppUtils.generate_access_token({"email": data.email, "user_id": repository_response.data.get("user_id")})
+            verification_link = f"{base_url}/api/v1/email/verify-user?token={token}"
+
+            await AppUtils.send_email(
+                subject="Verify your email",
+                recipient=data.email,
+                body=f"Welcome to our app!\n\nPlease verify your email by clicking the following link:\n{verification_link}"
+            )
+        return APIResponse(status=repository_response.status,
+                            message=repository_response.message,
+                            data=repository_response.data)
+    
+    @staticmethod
+    async def verify_user(token: str, session: Session) -> APIResponse:
+        email_data = await AppUtils.verify_access_token(token)
+        if not email_data:
+            return APIResponse.error("Invalid or expired token", status=400)
+        
+        email = email_data.get("email")
+        user_id = email_data.get("user_id")
+        
+        if not email or not user_id:
+            return APIResponse.error("Invalid token data", status=400)
+        
+        repository_response = await Repository.verify_user_email(email, user_id, session)
         return APIResponse(status=repository_response.status,
                             message=repository_response.message,
                             data=repository_response.data)
