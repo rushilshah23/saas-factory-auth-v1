@@ -9,3 +9,8 @@ class LoginEmailRequest(BaseModel):
     email:str
     password:str
 
+
+
+class AccessTokenPayload(BaseModel):
+    email: str
+    user_id: str

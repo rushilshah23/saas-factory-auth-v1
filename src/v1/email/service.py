@@ -3,6 +3,7 @@ from src.utils import Utils as AppUtils
 from .helpers import (
     RegisterEmailRequest,
     LoginEmailRequest,
+    AccessTokenPayload
     # VerifyEmailRequest,
     # ForgotPasswordRequest,
     # ResetPasswordRequest,
@@ -22,7 +23,7 @@ class Service:
         if repository_response.status == 201:
             base_url = SecretUtils.get_secret_value(SecretUtils.SECRETS.EMAIL_VERIFICATION_BASE_URL)
             token = await AppUtils.generate_access_token({"email": data.email, "user_id": repository_response.data.get("user_id")})
-            verification_link = f"{base_url}/api/v1/email/verify-user?token={token}"
+            verification_link = f"{base_url}/api/v1/email/verify-email?token={token}"
 
             await AppUtils.send_email(
                 subject="Verify your email",
@@ -55,17 +56,26 @@ class Service:
         email_user_repository_response = await Repository.get_user_by_email(data.email, session)
         email_user = email_user_repository_response.data
         if not email_user:
-            return APIResponse.error(f"Email user {data.email} not found", status=404)
-            
-        if not Utils.verify_password(data.password, email_user.password):
-            return APIResponse.error("Invalid credentials", status=401)
-            
+            return APIResponse(message=f"Email user {data.email} not found", status=404)
+        
         if not email_user.email_verified:
-            return APIResponse.error("Email not verified", status=403)
-            
-        token = Utils.generate_token({"sub": email_user.email})
+            return APIResponse(message="Email not verified", status=403)
+        
+        if not Utils().verify_password(data.password, email_user.password):
+            return APIResponse(message="Invalid credentials", status=401)
+
+        payload = AccessTokenPayload(
+            email=email_user.email,
+            user_id=email_user.user_id
+        )         
+        token = await AppUtils.generate_access_token(payload.model_dump())
+        if not token:
+            return APIResponse.error("Failed to generate access token", status=500)
+        
+        expires_in_minutes = int(SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_ACCESS_TOKEN_EXPIRE_MINUTES))
+        expires_in_seconds = expires_in_minutes * 60
         await Repository.update_last_login(email_user.id, session)
-        return APIResponse.success({"access_token": token, "token_type": "bearer"})
+        return APIResponse(message="Access token generated",data={"access_token": token, "token_type": "bearer", "expires_in":expires_in_seconds }, status=200)
 
     # @staticmethod
     # async def verify_email(data: VerifyEmailRequest, session: Session) -> APIResponse:

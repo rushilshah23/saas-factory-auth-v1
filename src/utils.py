@@ -9,7 +9,9 @@ class Utils:
     def generate_uuid() -> str:
         return str(uuid4())
     
-
+    @staticmethod
+    def get_current_timestamp() -> str:
+        return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
     @staticmethod
     async def send_email(subject: str, recipient: str, body: str) -> None:
@@ -34,9 +36,7 @@ class Utils:
         secret_key = SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_SECRET_KEY)
         algorithm = "HS256"
         expires_in = int(SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_ACCESS_TOKEN_EXPIRE_MINUTES))
-
         payload["exp"] = datetime.utcnow() + timedelta(minutes=expires_in)
-
         token = jwt.encode(payload, secret_key, algorithm=algorithm)
         return token
     

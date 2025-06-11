@@ -14,7 +14,7 @@ class Utils():
     def hash_password(cls,password: str) -> str:
         return cls._pwd_context.hash(password)
 
-    @staticmethod
+    @classmethod
     def verify_password(cls,plain: str, hashed: str) -> bool:
         return cls._pwd_context.verify(plain, hashed)
 

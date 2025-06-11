@@ -22,7 +22,7 @@ async def register(request: RegisterEmailRequest, session: SessionDependency) ->
         content=service_response.to_dict()
     )
 
-@router.get("/verify-user")
+@router.get("/verify-email")
 async def verify_user(token: str, session: SessionDependency) -> APIResponse:
     service_response = await Service.verify_user(token, session)
     return JSONResponse(
@@ -33,18 +33,25 @@ async def verify_user(token: str, session: SessionDependency) -> APIResponse:
 @router.post("/login")
 async def login(request: LoginEmailRequest, session: SessionDependency) -> APIResponse:
     service_response = await Service.login(request, session)
-    return JSONResponse(
+    response =  JSONResponse(
         status_code=service_response.status,
         content=service_response.to_dict()
     )
+    if service_response.status == 200:
+        # set in cookie
+        response.set_cookie(
+            key="access_token",
+            value=service_response.data.get("access_token"),
+            httponly=True,
+            secure=True,
+            samesite="Lax",
+            expires=service_response.data.get("expires_in")
+        )
+    return response
 
-# @router.post("/verify-email")
-# async def verify_email(request: VerifyEmailRequest, session: SessionDependency) -> APIResponse:
-#     service_response = await Service.verify_email(request, session)
-#     return JSONResponse(
-#         status_code=service_response.status,
-#         content=service_response.to_dict()
-#     )
+
+
+
 
 # @router.post("/forgot-password")
 # async def forgot_password(request: ForgotPasswordRequest, session: SessionDependency) -> APIResponse:

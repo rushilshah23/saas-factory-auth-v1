@@ -9,7 +9,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, delete
 from src.v1.helpers import UserAuthType
 from typing import Optional
-
+from src.utils import Utils as AppUtils
 
 class Repository:
 
@@ -98,6 +98,38 @@ class Repository:
             return RepositoryResponse(
                 status=200,
                 message="Email verified successfully",
+                data={"email": email_user.email, "user_id": email_user.user_id}
+            )
+
+        except Exception as e:
+            await session.rollback()
+            return RepositoryResponse(
+                status=500,
+                message=f"An error occurred: {str(e)}"
+            )
+        
+    
+    @staticmethod
+    async def update_last_login(email_user_id: str, session: AsyncSession) -> RepositoryResponse:
+        try:
+            result = await session.execute(
+                select(EmailUser).where(EmailUser.id == email_user_id)
+            )
+            email_user = result.scalar_one_or_none()
+
+            if not email_user:
+                return RepositoryResponse(
+                    status=404,
+                    message="Email user not found",
+                    data=None
+                )
+
+            email_user.last_login = AppUtils.get_current_timestamp()
+            await session.commit()
+
+            return RepositoryResponse(
+                status=200,
+                message="Last login updated successfully",
                 data={"email": email_user.email, "user_id": email_user.user_id}
             )
 
