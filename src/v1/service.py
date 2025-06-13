@@ -11,6 +11,8 @@ class Service:
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
 
+        
+
         if not token:
             token = request.cookies.get("access_token")
 
@@ -18,6 +20,7 @@ class Service:
             raise HTTPException(status_code=401, detail="Missing access token")
 
         payload = await AppUtils.verify_access_token(token)
+        print(f"Payload: {payload}")
         if not payload:
             raise HTTPException(status_code=401, detail="Invalid or expired token")
 

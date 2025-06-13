@@ -4,6 +4,8 @@ from init_db import create_db_and_tables
 from contextlib import asynccontextmanager
 
 SecretUtils.collect_secrets()
+print(SecretUtils.COLLECTED_SECRETS)
+
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):

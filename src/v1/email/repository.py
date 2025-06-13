@@ -139,3 +139,34 @@ class Repository:
                 status=500,
                 message=f"An error occurred: {str(e)}"
             )
+        
+    @staticmethod
+    async def update_password(email: str, new_password: str, session: AsyncSession) -> RepositoryResponse:
+        try:
+            result = await session.execute(
+                select(EmailUser).where(EmailUser.email == email)
+            )
+            email_user = result.scalar_one_or_none()
+
+            if not email_user:
+                return RepositoryResponse(
+                    status=404,
+                    message="Email user not found",
+                    data=None
+                )
+
+            email_user.password = EmailUtils.hash_password(new_password)
+            await session.commit()
+
+            return RepositoryResponse(
+                status=200,
+                message="Password updated successfully",
+                data={"email": email_user.email, "user_id": email_user.user_id}
+            )
+
+        except Exception as e:
+            await session.rollback()
+            return RepositoryResponse(
+                status=500,
+                message=f"An error occurred: {str(e)}"
+            )
