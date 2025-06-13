@@ -22,7 +22,7 @@ class Service:
         repository_response = await Repository.register(data, session)
         if repository_response.status == 201:
             base_url = SecretUtils.get_secret_value(SecretUtils.SECRETS.EMAIL_VERIFICATION_BASE_URL)
-            token = await AppUtils.generate_access_token({"email": data.email, "user_id": repository_response.data.get("user_id")})
+            token =  AppUtils.generate_access_token({"email": data.email, "user_id": repository_response.data.get("user_id")})
             verification_link = f"{base_url}/api/v1/email/verify-email?token={token}"
 
             await AppUtils.send_email(
