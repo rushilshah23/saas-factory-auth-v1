@@ -22,7 +22,7 @@ class Service:
             return APIResponse("Passwords do not match", status=StatusCodes.HTTP_400_BAD_REQUEST)
         repository_response = await Repository.register(data, session)
         if repository_response.status == StatusCodes.HTTP_201_CREATED:
-            base_url = SecretUtils.get_secret_value(SecretUtils.SECRETS.EMAIL_VERIFICATION_BASE_URL)
+            base_url = SecretUtils.get_secret_value(SecretUtils.SECRETS.SERVER_BASE_URL)
             payload = TokenPayload(
                 email=data.email,
                 user_id=repository_response.data.get("user_id")
@@ -159,7 +159,7 @@ class Service:
             
         reset_token = AppUtils.generate_password_reset_token(payload)
         # send reset token via email
-        base_url = SecretUtils.get_secret_value(SecretUtils.SECRETS.EMAIL_VERIFICATION_BASE_URL)
+        base_url = SecretUtils.get_secret_value(SecretUtils.SECRETS.CLIENT_BASE_URL)
         reset_link = f"{base_url}/api/v1/email/reset-password?token={reset_token}"
         await AppUtils.send_email(
             subject="Password Reset Request",
