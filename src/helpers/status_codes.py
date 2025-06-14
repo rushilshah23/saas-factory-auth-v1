@@ -59,5 +59,3 @@ class StatusCodes(Enum):
     HTTP_510_NOT_EXTENDED = 510
     HTTP_511_NETWORK_AUTHENTICATION_REQUIRED = 511
 
-    def __eq__(self, value):
-        return super().__eq__(value)
