@@ -11,7 +11,23 @@ from src.v1.helpers import UserAuthType
 from typing import Optional
 from src.utils import Utils as AppUtils
 from src.helpers.status_codes import StatusCodes
+from datetime import datetime
+from enum import Enum
+
+
+
 class Repository:
+    @staticmethod
+    def serialize_model(obj):
+        def serialize(item):
+            if isinstance(item, datetime):
+                return item.isoformat()
+            if isinstance(item, Enum):
+                return item.value
+            return item
+        
+        return {key: serialize(value) for key, value in obj.model_dump().items()}
+    
 
     @staticmethod
     async def get_user_by_email(email: str, session: AsyncSession) -> RepositoryResponse[EmailUser | None]:
@@ -29,6 +45,12 @@ class Repository:
         try:
             user_exists_response = await Repository.get_user_by_email(data.email, session)
             if user_exists_response.data:
+                if user_exists_response.data.email_verified is False:
+                    return RepositoryResponse(
+                    status=StatusCodes.HTTP_208_ALREADY_REPORTED,
+                    message="User with this email already exists but not verified",
+                    data={"email_user": Repository.serialize_model(user_exists_response.data)}
+                )
                 return RepositoryResponse(
                     status=StatusCodes.HTTP_400_BAD_REQUEST,
                     message="User with this email already exists",
@@ -39,7 +61,8 @@ class Repository:
                 id=Utils.generate_uuid(),
                 is_active=True,
                 last_login=None,
-                user_auth_type=UserAuthType.EMAIL
+                user_auth_type=UserAuthType.EMAIL,
+                created_at=AppUtils.get_current_timestamp()
             )
             session.add(new_user)
             await session.flush()
@@ -49,7 +72,8 @@ class Repository:
                 email=data.email,
                 password=EmailUtils.hash_password(data.password),
                 email_verified=False,
-                user_id=new_user.id
+                user_id=new_user.id,
+                password_updated_at=AppUtils.get_current_timestamp()
             )
             session.add(new_email_user)
             await session.commit()
@@ -59,7 +83,7 @@ class Repository:
             return RepositoryResponse(
                 status=StatusCodes.HTTP_201_CREATED,
                 message="User data saved successfully",
-                data={"email": new_email_user.email, "user_id": new_email_user.user_id}
+                data={"email_user": Repository.serialize_model(new_email_user), "user": Repository.serialize_model(new_user)}
             )
 
         except Exception as e:
@@ -70,12 +94,12 @@ class Repository:
             )
         
     @staticmethod
-    async def verify_user_email(email: str, user_id: str, session: AsyncSession) -> RepositoryResponse:
+    async def verify_user_email(email: str, email_user_id: str, session: AsyncSession) -> RepositoryResponse:
         try:
             result = await session.execute(
                 select(EmailUser).where(
                     EmailUser.email == email,
-                    EmailUser.user_id == user_id
+                    EmailUser.id == email_user_id
                 )
             )
             email_user = result.scalar_one_or_none()
@@ -83,7 +107,7 @@ class Repository:
             if not email_user:
                 return RepositoryResponse(
                     status=StatusCodes.HTTP_404_NOT_FOUND,
-                    message="Email user not found",
+                    message=f"Email user {email} not found",
                     data=None
                 )
             if email_user.email_verified:
@@ -156,6 +180,8 @@ class Repository:
                 )
 
             email_user.password = EmailUtils.hash_password(new_password)
+            email_user.password_updated_at = AppUtils.get_current_timestamp()
+
             await session.commit()
 
             return RepositoryResponse(

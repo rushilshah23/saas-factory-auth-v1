@@ -20,11 +20,11 @@ class Service:
             token = request.cookies.get(CookieNames.ACCESS_TOKEN.value)
 
         if not token:
-            raise HTTPException(status_code=StatusCodes.HTTP_401_UNAUTHORIZED, detail="Missing access token")
+            raise HTTPException(status_code=StatusCodes.HTTP_401_UNAUTHORIZED.value, detail="Missing access token")
 
         payload = await AppUtils.verify_access_token(token)
         if not payload:
-            raise HTTPException(status_code=StatusCodes.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+            raise HTTPException(status_code=StatusCodes.HTTP_401_UNAUTHORIZED.value, detail="Invalid or expired token")
 
         return APIResponse(
             status=StatusCodes.HTTP_200_OK,

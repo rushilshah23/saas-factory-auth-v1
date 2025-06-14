@@ -6,7 +6,7 @@ from jose import jwt
 from datetime import datetime, timedelta, timezone
 from src.helpers.token import TokenPayload
 import aiosmtplib
-
+import time
 
 class Utils:
     @staticmethod
@@ -14,9 +14,14 @@ class Utils:
         return str(uuid4())
     
     @staticmethod
-    def get_current_timestamp() -> str:
+    def get_current_timestamp_numeric() -> int:
         # return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         return int(datetime.now(timezone.utc).timestamp())
+
+    @staticmethod
+    def get_current_timestamp() -> datetime:
+        """Return UTC aware datetime for DB storage."""
+        return datetime.now(timezone.utc)
 
 
     # @staticmethod

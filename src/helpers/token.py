@@ -9,8 +9,9 @@ class CookieNames(Enum):
     
 class TokenPayload(BaseModel):
     email: str
-    user_id: str
-    is_active: bool
+    email_user_id: str
+    global_user_id:str
+    is_active: bool | None
     is_verified: bool
     exp:int | None = None
 

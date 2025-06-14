@@ -18,8 +18,8 @@ from src.helpers.status_codes import StatusCodes
 router = APIRouter(tags=["Email"], prefix="/email")
 
 @router.post("/register")
-async def register(request: RegisterEmailRequest, session: SessionDependency) -> APIResponse:
-    service_response = await Service.register(request, session)
+async def register(request: RegisterEmailRequest, session: SessionDependency, background_tasks:BackgroundTasks) -> APIResponse:
+    service_response = await Service.register(request, session,background_tasks=background_tasks)
     return JSONResponse(
         status_code=service_response.status.value,
         content=service_response.to_dict()

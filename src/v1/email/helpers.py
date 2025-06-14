@@ -29,3 +29,9 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
     confirm_password: str
 
+
+
+class SafeUserResponse(BaseModel):
+    email:str
+    global_user_id:str
+    email_user_id:str

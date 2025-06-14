@@ -8,6 +8,7 @@ from .helpers import (
     ChangePasswordRequest
 )
 from src.helpers.response import APIResponse
+from .domain import EmailPublicUser
 from .repository import Repository
 from sqlmodel import Session
 from src.configs.secrets import SecretUtils
@@ -16,18 +17,32 @@ from src.v1.service import Service as AppService
 from src.helpers.token import TokenPayload
 from src.helpers.status_codes import StatusCodes
 from fastapi import BackgroundTasks
-
+from .helpers import SafeUserResponse
 class Service:
     @staticmethod
     async def register(data: RegisterEmailRequest, session: Session, background_tasks:BackgroundTasks) -> APIResponse:
         if data.password != data.confirm_password:
             return APIResponse("Passwords do not match", status=StatusCodes.HTTP_400_BAD_REQUEST)
         repository_response = await Repository.register(data, session)
-        if repository_response.status == StatusCodes.HTTP_201_CREATED:
+        if repository_response.status in [StatusCodes.HTTP_201_CREATED, StatusCodes.HTTP_208_ALREADY_REPORTED]:
+            new_user = repository_response.data.get("user")
+            email_user = repository_response.data.get("email_user")
             base_url = SecretUtils.get_secret_value(SecretUtils.SECRETS.SERVER_BASE_URL)
+            print("========NEW USER============")
+            print(new_user)
+            print("==========================")
+            print("==============EMAIL USER==============")
+            print(email_user)
+            print("==========================")
+            print(type(new_user))
+
             payload = TokenPayload(
-                email=data.email,
-                user_id=repository_response.data.get("user_id")
+                email=email_user["email"],
+                email_user_id=email_user["id"],
+                global_user_id=email_user["user_id"],
+                exp=None,
+                is_active=new_user.get("is_active") if new_user else None,
+                is_verified=email_user["email_verified"]
             )
             if not payload:
                 return APIResponse("Failed to generate token payload", status=StatusCodes.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -43,6 +58,16 @@ class Service:
 
 
             )
+            safe_user = EmailPublicUser.from_dict(
+                {
+                   "email": email_user["email"],
+                   "email_user_id":email_user["id"],
+                   "global_user_id":email_user["user_id"]
+                }
+            )
+            return APIResponse(status=repository_response.status,
+                            message="Click verification link on email",
+                            data=safe_user.to_dict())
             # await AppUtils.send_email(
             #     subject="Verify your email",
             #     recipient=data.email,
@@ -56,15 +81,15 @@ class Service:
     async def verify_user(token: str, session: Session) -> APIResponse:
         email_data = await AppUtils.verify_access_token(token)
         if not email_data:
-            return APIResponse("Invalid or expired token", status=StatusCodes.HTTP_400_BAD_REQUEST)
+            return APIResponse(message="Invalid or expired token", status=StatusCodes.HTTP_400_BAD_REQUEST)
         
         email = email_data.email
-        user_id = email_data.user_id
+        email_user_id = email_data.email_user_id
         
-        if not email or not user_id:
+        if not email or not email_user_id:
             return APIResponse("Invalid token data", status=StatusCodes.HTTP_400_BAD_REQUEST)
         
-        repository_response = await Repository.verify_user_email(email, user_id, session)
+        repository_response = await Repository.verify_user_email(email, email_user_id, session)
         return APIResponse(status=repository_response.status,
                             message=repository_response.message,
                             data=repository_response.data)
@@ -84,9 +109,10 @@ class Service:
 
         payload = TokenPayload(
             email=email_user.email,
-            user_id=email_user.user_id,
+            email_user_id=email_user.id,
             is_active=email_user.email_verified,
             is_verified=email_user.email_verified,
+            global_user_id=email_user.user_id,
             exp=None
         )         
         access_token =   AppUtils.generate_access_token(payload)
@@ -125,12 +151,9 @@ class Service:
         if not payload:
             return APIResponse(message="Invalid or expired refresh token. Please login again", status=StatusCodes.HTTP_401_UNAUTHORIZED)
         refresh_token_renew_threshold = float(SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_REFRESH_TOKEN_RENEW_THRESHOLD))
-        print(f"Current timestamp: {AppUtils.get_current_timestamp()}")
-        print(f"Refresh token expiry: {payload.exp}")
-        print(f"Refresh token renew threshold: {refresh_token_renew_threshold}")
-        print(f"Time left for refresh token renewal: {payload.exp - AppUtils.get_current_timestamp()} seconds")
 
-        if payload.exp - AppUtils.get_current_timestamp() < refresh_token_renew_threshold*60:
+
+        if payload.exp - AppUtils.get_current_timestamp_numeric() < refresh_token_renew_threshold*60:
             # Regenerate access and refresh tokens
             access_token = AppUtils.generate_access_token(payload)
             refresh_token = AppUtils.generate_refresh_token(payload)
@@ -164,7 +187,7 @@ class Service:
         if not user:
             return APIResponse("User not found", status=StatusCodes.HTTP_404_NOT_FOUND)
         
-        payload = TokenPayload(email=user.data.email,user_id=user.data.user_id,is_active=user.data.email_verified,is_verified=user.data.email_verified)
+        payload = TokenPayload(email=user.data.email,email_user_id=user.data.user_id,is_active=user.data.email_verified,is_verified=user.data.email_verified,global_user_id = user.data.user_id)
             
         reset_token = AppUtils.generate_password_reset_token(payload)
         if not reset_token:
@@ -195,14 +218,14 @@ class Service:
     @staticmethod
     async def reset_password(data: ResetPasswordRequest, token:str, session: Session) -> APIResponse:
         if data.new_password != data.confirm_password:
-            return APIResponse("Passwords do not match", status=StatusCodes.HTTP_400_BAD_REQUEST)
+            return APIResponse(message="Passwords do not match", status=StatusCodes.HTTP_400_BAD_REQUEST)
             
         payload = AppUtils.verify_password_reset_token(token=token)
         if not payload:
-            return APIResponse("Invalid or expired token", status=StatusCodes.HTTP_400_BAD_REQUEST)
+            return APIResponse(message="Invalid or expired token", status=StatusCodes.HTTP_400_BAD_REQUEST)
         email = payload.email
         if not email:
-            return APIResponse("Invalid token data", status=StatusCodes.HTTP_400_BAD_REQUEST)
+            return APIResponse(message="Invalid token data", status=StatusCodes.HTTP_400_BAD_REQUEST)
         return await Repository.update_password(
             email, data.new_password, session
         )
@@ -219,7 +242,7 @@ class Service:
             return APIResponse("Old password is required", status=StatusCodes.HTTP_400_BAD_REQUEST)
         if not auth_user.data.get("email"):
             return APIResponse(message="Email not found in token", status=StatusCodes.HTTP_400_BAD_REQUEST)
-        if not auth_user.data.get("user_id"):
+        if not auth_user.data.get("email_user_id"):
             return APIResponse(message="User ID not found in token", status=StatusCodes.HTTP_400_BAD_REQUEST)
         if auth_user.data.get("email") != data.email_id:
             return APIResponse(message="Email in token does not match the provided email", status=StatusCodes.HTTP_400_BAD_REQUEST)
@@ -235,7 +258,7 @@ class Service:
         
         # update password
         if not email_user.data:
-            return APIResponse(message="User ID not found", status=StatusCodes.HTTP_400_BAD_REQUEST)
+            return APIResponse(message="Email user data not found", status=StatusCodes.HTTP_400_BAD_REQUEST)
         if not data.new_password:
             return APIResponse(message="New password is required", status=StatusCodes.HTTP_400_BAD_REQUEST)
 
