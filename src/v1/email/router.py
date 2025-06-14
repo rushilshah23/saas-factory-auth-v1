@@ -12,7 +12,7 @@ from src.helpers.response import APIResponse
 from fastapi.responses import JSONResponse
 from src.db import SessionDependency
 from .utils import Utils
-
+from src.helpers.token import CookieNames
 
 router = APIRouter(tags=["Email"], prefix="/email")
 
@@ -43,10 +43,10 @@ async def login(request: LoginEmailRequest, session: SessionDependency) -> APIRe
         print(f"Access expires in: {service_response.data.get('tokens').get('access_token_expiry')}")
         print(f"Refresh expires in: {service_response.data.get('tokens').get('refresh_token_expiry')}")
         # set in cookie
-        Utils.set_cookie(response, "access_token", service_response.data.get("tokens").get("access_token"),
+        Utils.set_cookie(response, CookieNames.ACCESS_TOKEN.value, service_response.data.get("tokens").get("access_token"),
                         expires=int(service_response.data.get('tokens').get("access_token_expiry")))
 
-        Utils.set_cookie(response, "refresh_token", service_response.data.get("tokens").get("refresh_token"),
+        Utils.set_cookie(response, CookieNames.REFRESH_TOKEN.value, service_response.data.get("tokens").get("refresh_token"),
                         expires=int(service_response.data.get('tokens').get("refresh_token_expiry")))
 
     return response
@@ -62,23 +62,13 @@ async def refresh_token(request:Request,session: SessionDependency) -> APIRespon
     )
     if service_response.status == 200:
         # set in cookie
-        response.set_cookie(
-            key="access_token",
-            value=service_response.data.get("tokens").get("access_token"),
-            httponly=True,
-            secure=True,
-            samesite="Lax",
-            expires=int(service_response.data.get('tokens').get("access_token_expiry"))
-        )
-        
-        response.set_cookie(
-            key="refresh_token",
-            value=service_response.data.get("tokens").get("refresh_token"),
-            httponly=True,
-            secure=True,
-            samesite="Lax",
-            expires=int(service_response.data.get('tokens').get("refresh_token_expiry"))
-        )
+        Utils.set_cookie(response, CookieNames.ACCESS_TOKEN.value, service_response.data.get("tokens").get("access_token"),
+                        expires=int(service_response.data.get('tokens').get("access_token_expiry")))
+        Utils.set_cookie(response,CookieNames.REFRESH_TOKEN.value, service_response.data.get("tokens").get("refresh_token"),
+                        expires=int(service_response.data.get('tokens').get("refresh_token_expiry")))
+    else:
+        response.delete_cookie(CookieNames.ACCESS_TOKEN.value)
+        response.delete_cookie(CookieNames.REFRESH_TOKEN.value)
     return response
 
 
@@ -116,6 +106,6 @@ async def logout(request: Request, session: SessionDependency) -> APIResponse:
         status_code=service_response.status,
         content=service_response.to_dict()
     )
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
+    response.delete_cookie(CookieNames.ACCESS_TOKEN.value)
+    response.delete_cookie(CookieNames.REFRESH_TOKEN.value)
     return response

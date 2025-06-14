@@ -2,6 +2,7 @@ from src.utils import Utils as AppUtils
 from src.helpers.response import APIResponse
 from fastapi import HTTPException, Request
 from src.helpers.response import APIResponse
+from src.helpers.token import CookieNames
 class Service:
 
     async def authenticate(request:Request):
@@ -14,7 +15,7 @@ class Service:
         
 
         if not token:
-            token = request.cookies.get("access_token")
+            token = request.cookies.get(CookieNames.ACCESS_TOKEN.value)
 
         if not token:
             raise HTTPException(status_code=401, detail="Missing access token")
