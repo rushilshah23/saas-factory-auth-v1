@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from src.db import SessionDependency
 from .utils import Utils
 from src.helpers.token import CookieNames
+from src.helpers.status_codes import StatusCodes
 
 router = APIRouter(tags=["Email"], prefix="/email")
 
@@ -20,7 +21,7 @@ router = APIRouter(tags=["Email"], prefix="/email")
 async def register(request: RegisterEmailRequest, session: SessionDependency) -> APIResponse:
     service_response = await Service.register(request, session)
     return JSONResponse(
-        status_code=service_response.status,
+        status_code=service_response.status.value,
         content=service_response.to_dict()
     )
 
@@ -28,7 +29,7 @@ async def register(request: RegisterEmailRequest, session: SessionDependency) ->
 async def verify_user(token: str, session: SessionDependency) -> APIResponse:
     service_response = await Service.verify_user(token, session)
     return JSONResponse(
-        status_code=service_response.status,
+        status_code=service_response.status.value,
         content=service_response.to_dict()
     )
 
@@ -36,10 +37,10 @@ async def verify_user(token: str, session: SessionDependency) -> APIResponse:
 async def login(request: LoginEmailRequest, session: SessionDependency) -> APIResponse:
     service_response = await Service.login(request, session)
     response =  JSONResponse(
-        status_code=service_response.status,
+        status_code=service_response.status.value,
         content=service_response.to_dict()
     )
-    if service_response.status == 200:
+    if service_response.status == StatusCodes.HTTP_200_OK:
         print(f"Access expires in: {service_response.data.get('tokens').get('access_token_expiry')}")
         print(f"Refresh expires in: {service_response.data.get('tokens').get('refresh_token_expiry')}")
         # set in cookie
@@ -48,7 +49,11 @@ async def login(request: LoginEmailRequest, session: SessionDependency) -> APIRe
 
         Utils.set_cookie(response, CookieNames.REFRESH_TOKEN.value, service_response.data.get("tokens").get("refresh_token"),
                         expires=int(service_response.data.get('tokens').get("refresh_token_expiry")))
-
+    elif service_response.status == StatusCodes.HTTP_201_CREATED:
+        pass
+    else:
+        response.delete_cookie(CookieNames.ACCESS_TOKEN.value)
+        response.delete_cookie(CookieNames.REFRESH_TOKEN.value)
     return response
 
 
@@ -57,18 +62,21 @@ async def login(request: LoginEmailRequest, session: SessionDependency) -> APIRe
 async def refresh_token(request:Request,session: SessionDependency) -> APIResponse:
     service_response = await Service.refresh_token(request, session)
     response = JSONResponse(
-        status_code=service_response.status,
+        status_code=service_response.status.value,
         content=service_response.to_dict()
     )
-    if service_response.status == 200:
+    if service_response.status == StatusCodes.HTTP_200_OK:
         # set in cookie
         Utils.set_cookie(response, CookieNames.ACCESS_TOKEN.value, service_response.data.get("tokens").get("access_token"),
                         expires=int(service_response.data.get('tokens').get("access_token_expiry")))
         Utils.set_cookie(response,CookieNames.REFRESH_TOKEN.value, service_response.data.get("tokens").get("refresh_token"),
                         expires=int(service_response.data.get('tokens').get("refresh_token_expiry")))
+    elif service_response.status == StatusCodes.HTTP_201_CREATED:
+        pass
     else:
         response.delete_cookie(CookieNames.ACCESS_TOKEN.value)
         response.delete_cookie(CookieNames.REFRESH_TOKEN.value)
+
     return response
 
 
@@ -78,7 +86,7 @@ async def refresh_token(request:Request,session: SessionDependency) -> APIRespon
 async def forgot_password(request: ForgotPasswordRequest, session: SessionDependency) -> APIResponse:
     service_response = await Service.forgot_password(request, session)
     return JSONResponse(
-        status_code=service_response.status,
+        status_code=service_response.status.value,
         content=service_response.to_dict()
     )
 
@@ -86,7 +94,7 @@ async def forgot_password(request: ForgotPasswordRequest, session: SessionDepend
 async def reset_password(request: ResetPasswordRequest,token:str, session: SessionDependency) -> APIResponse:
     service_response = await Service.reset_password(request, token, session)
     return JSONResponse(
-        status_code=service_response.status,
+        status_code=service_response.status.value,
         content=service_response.to_dict()
     )
 
@@ -95,7 +103,7 @@ async def change_password(request:Request,data: ChangePasswordRequest, session: 
 
     service_response = await Service.change_password(request,data, session)
     return JSONResponse(
-        status_code=service_response.status,
+        status_code=service_response.status.value,
         content=service_response.to_dict()
     )
 
@@ -103,7 +111,7 @@ async def change_password(request:Request,data: ChangePasswordRequest, session: 
 async def logout(request: Request, session: SessionDependency) -> APIResponse:
     service_response = await Service.logout(request, session)
     response  = JSONResponse(
-        status_code=service_response.status,
+        status_code=service_response.status.value,
         content=service_response.to_dict()
     )
     response.delete_cookie(CookieNames.ACCESS_TOKEN.value)

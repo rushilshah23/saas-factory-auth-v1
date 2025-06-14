@@ -11,9 +11,7 @@ class LoginEmailRequest(BaseModel):
 
 
 
-class AccessTokenPayload(BaseModel):
-    email: str
-    user_id: str
+
 
 
 class ForgotPasswordRequest(BaseModel):

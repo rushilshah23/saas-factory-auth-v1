@@ -4,6 +4,8 @@ from email.message import EmailMessage
 from src.configs.secrets import SecretUtils
 from jose import jwt
 from datetime import datetime, timedelta, timezone
+from src.helpers.token import TokenPayload
+
 class Utils:
     @staticmethod
     def generate_uuid() -> str:
@@ -34,19 +36,19 @@ class Utils:
 
 
     @staticmethod
-    def generate_access_token(payload: dict) -> str:
+    def generate_access_token(payload: TokenPayload) -> str:
         secret_key = SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_ACCESS_SECRET_KEY)
         algorithm = SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_ALGORITHM)
         expires_in = int(SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_ACCESS_TOKEN_EXPIRE_MINUTES))
 
-        payload_copy = payload.copy()
-        payload_copy["exp"] = int((datetime.now(timezone.utc) + timedelta(minutes=expires_in)).timestamp())
+    
+        payload.exp = int((datetime.now(timezone.utc) + timedelta(minutes=expires_in)).timestamp())
 
-        token = jwt.encode(payload_copy, secret_key, algorithm=algorithm)
+        token = jwt.encode(payload.to_dict(), secret_key, algorithm=algorithm)
         return token
 
     @staticmethod
-    async def verify_access_token(token: str) -> dict:
+    async def verify_access_token(token: str) -> TokenPayload:
         secret_key = SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_ACCESS_SECRET_KEY)
         algorithm = SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_ALGORITHM)
         print(f"Verifying token: {token}")
@@ -54,7 +56,7 @@ class Utils:
         print(f"Algorithm: {algorithm}")
         try:
             payload = jwt.decode(token, secret_key, algorithms=[algorithm])
-            return payload
+            return TokenPayload(**payload)
         except jwt.ExpiredSignatureError:
             print("❌ Access token has expired.")
             return {}
@@ -63,26 +65,23 @@ class Utils:
             return {}
         
     @staticmethod
-    def generate_refresh_token(payload: dict) -> str:
+    def generate_refresh_token(payload: TokenPayload) -> str:
         secret_key = SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_REFRESH_SECRET_KEY)
         algorithm = SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_ALGORITHM)
         expires_in = int(SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_REFRESH_TOKEN_EXPIRE_MINUTES))
         
-        payload_copy = payload.copy()
-        payload_copy["exp"] = int((datetime.now(timezone.utc) + timedelta(minutes=expires_in)).timestamp())
+        payload.exp = int((datetime.now(timezone.utc) + timedelta(minutes=expires_in)).timestamp())
         
-        token = jwt.encode(payload_copy, secret_key, algorithm=algorithm)
-        print(f"Generated token exp: {payload_copy['exp']}")
-        print(f"Current UTC: {datetime.utcnow().timestamp()}")
+        token = jwt.encode(payload.to_dict(), secret_key, algorithm=algorithm)
         return token
 
     @staticmethod
-    def verify_refresh_token(token: str) -> dict:
+    def verify_refresh_token(token: str) -> TokenPayload:
         secret_key = SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_REFRESH_SECRET_KEY)
         algorithm = SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_ALGORITHM)
         try:
             payload = jwt.decode(token, secret_key, algorithms=[algorithm])
-            return payload
+            return TokenPayload(**payload)
         except jwt.ExpiredSignatureError:
             print("❌ Refresh token has expired.")
             return {}
@@ -91,26 +90,24 @@ class Utils:
             return {}
         
     @staticmethod
-    def generate_password_reset_token(email: str) -> str:
+    def generate_password_reset_token(payload:TokenPayload) -> str:
         secret_key = SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_ACCESS_SECRET_KEY)
         algorithm = SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_ALGORITHM)
         expires_in = int(SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_ACCESS_TOKEN_EXPIRE_MINUTES))
+        payload.exp = int((datetime.now(timezone.utc) + timedelta(minutes=expires_in)).timestamp())
+ 
+
         
-        payload = {
-            "email": email,
-            "exp": int((datetime.now(timezone.utc) + timedelta(minutes=expires_in)).timestamp())
-        }
-        
-        token = jwt.encode(payload, secret_key, algorithm=algorithm)
+        token = jwt.encode(payload.to_dict(), secret_key, algorithm=algorithm)
         return token
     
     @staticmethod
-    def verify_password_reset_token(token: str) -> dict:
+    def verify_password_reset_token(token: str) -> TokenPayload:
         secret_key = SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_ACCESS_SECRET_KEY)
         algorithm = SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_ALGORITHM)
         try:
             payload = jwt.decode(token, secret_key, algorithms=[algorithm])
-            return payload
+            return TokenPayload(**payload)
         except jwt.ExpiredSignatureError:
             print("❌ Password reset token has expired.")
             return {}

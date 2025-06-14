@@ -12,7 +12,7 @@ class TokenPayload(BaseModel):
     user_id: str
     is_active: bool
     is_verified: bool
-    exp:int
+    exp:int | None = None
 
     def to_dict(self):
         return self.model_dump()

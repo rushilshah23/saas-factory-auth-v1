@@ -28,7 +28,7 @@ v1_router.include_router(email_router)
 @v1_router.get("/authenticate")
 async def authenticate(authenticated_user = Depends(Service.authenticate)):
     return JSONResponse(
-        status_code=authenticated_user.status,
+        status_code=authenticated_user.status.value,
         
         content=authenticated_user.data
     )

@@ -10,7 +10,7 @@ from sqlmodel import select, delete
 from src.v1.helpers import UserAuthType
 from typing import Optional
 from src.utils import Utils as AppUtils
-
+from src.helpers.status_codes import StatusCodes
 class Repository:
 
     @staticmethod
@@ -19,7 +19,7 @@ class Repository:
             select(EmailUser).where(EmailUser.email == email)
         )
         return RepositoryResponse[EmailUser | None](
-            status=200,
+            status=StatusCodes.HTTP_200_OK,
             message="User searched successfully",
             data=result.scalar_one_or_none()
         )
@@ -30,7 +30,7 @@ class Repository:
             user_exists_response = await Repository.get_user_by_email(data.email, session)
             if user_exists_response.data:
                 return RepositoryResponse(
-                    status=400,
+                    status=StatusCodes.HTTP_400_BAD_REQUEST,
                     message="User with this email already exists",
                     data={"email": data.email}
                 )
@@ -57,7 +57,7 @@ class Repository:
 
 
             return RepositoryResponse(
-                status=201,
+                status=StatusCodes.HTTP_201_CREATED,
                 message="User data saved successfully",
                 data={"email": new_email_user.email, "user_id": new_email_user.user_id}
             )
@@ -65,7 +65,7 @@ class Repository:
         except Exception as e:
             await session.rollback()  # <- important
             return RepositoryResponse(
-                status=500,
+                status=StatusCodes.HTTP_500_INTERNAL_SERVER_ERROR,
                 message=f"An error occurred: {str(e)}"
             )
         
@@ -82,13 +82,13 @@ class Repository:
 
             if not email_user:
                 return RepositoryResponse(
-                    status=404,
+                    status=StatusCodes.HTTP_404_NOT_FOUND,
                     message="Email user not found",
                     data=None
                 )
             if email_user.email_verified:
                 return RepositoryResponse(
-                    status=400,
+                    status=StatusCodes.HTTP_400_BAD_REQUEST,
                     message="Email already verified",
                     data={"email": email_user.email, "user_id": email_user.user_id}
                 )
@@ -96,7 +96,7 @@ class Repository:
             await session.commit()
 
             return RepositoryResponse(
-                status=200,
+                status=StatusCodes.HTTP_200_OK,
                 message="Email verified successfully",
                 data={"email": email_user.email, "user_id": email_user.user_id}
             )
@@ -104,7 +104,7 @@ class Repository:
         except Exception as e:
             await session.rollback()
             return RepositoryResponse(
-                status=500,
+                status=StatusCodes.HTTP_500_INTERNAL_SERVER_ERROR,
                 message=f"An error occurred: {str(e)}"
             )
         
@@ -119,7 +119,7 @@ class Repository:
 
             if not email_user:
                 return RepositoryResponse(
-                    status=404,
+                    status=StatusCodes.HTTP_404_NOT_FOUND,
                     message="Email user not found",
                     data=None
                 )
@@ -128,7 +128,7 @@ class Repository:
             await session.commit()
 
             return RepositoryResponse(
-                status=200,
+                status=StatusCodes.HTTP_200_OK,
                 message="Last login updated successfully",
                 data={"email": email_user.email, "user_id": email_user.user_id}
             )
@@ -136,7 +136,7 @@ class Repository:
         except Exception as e:
             await session.rollback()
             return RepositoryResponse(
-                status=500,
+                status=StatusCodes.HTTP_500_INTERNAL_SERVER_ERROR,
                 message=f"An error occurred: {str(e)}"
             )
         
@@ -150,7 +150,7 @@ class Repository:
 
             if not email_user:
                 return RepositoryResponse(
-                    status=404,
+                    status=StatusCodes.HTTP_404_NOT_FOUND,
                     message="Email user not found",
                     data=None
                 )
@@ -159,7 +159,7 @@ class Repository:
             await session.commit()
 
             return RepositoryResponse(
-                status=200,
+                status=StatusCodes.HTTP_200_OK,
                 message="Password updated successfully",
                 data={"email": email_user.email, "user_id": email_user.user_id}
             )
@@ -167,6 +167,6 @@ class Repository:
         except Exception as e:
             await session.rollback()
             return RepositoryResponse(
-                status=500,
+                status=StatusCodes.HTTP_500_INTERNAL_SERVER_ERROR,
                 message=f"An error occurred: {str(e)}"
             )
