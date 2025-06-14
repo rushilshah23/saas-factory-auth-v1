@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, BackgroundTasks
 from .helpers import (
     RegisterEmailRequest,
     LoginEmailRequest,
@@ -83,8 +83,8 @@ async def refresh_token(request:Request,session: SessionDependency) -> APIRespon
 
 
 @router.post("/forgot-password")
-async def forgot_password(request: ForgotPasswordRequest, session: SessionDependency) -> APIResponse:
-    service_response = await Service.forgot_password(request, session)
+async def forgot_password(request: ForgotPasswordRequest, session: SessionDependency, background_tasks:BackgroundTasks) -> APIResponse:
+    service_response = await Service.forgot_password(request, session, background_tasks=background_tasks)
     return JSONResponse(
         status_code=service_response.status.value,
         content=service_response.to_dict()

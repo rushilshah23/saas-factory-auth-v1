@@ -15,9 +15,11 @@ from fastapi import Request
 from src.v1.service import Service as AppService
 from src.helpers.token import TokenPayload
 from src.helpers.status_codes import StatusCodes
+from fastapi import BackgroundTasks
+
 class Service:
     @staticmethod
-    async def register(data: RegisterEmailRequest, session: Session) -> APIResponse:
+    async def register(data: RegisterEmailRequest, session: Session, background_tasks:BackgroundTasks) -> APIResponse:
         if data.password != data.confirm_password:
             return APIResponse("Passwords do not match", status=StatusCodes.HTTP_400_BAD_REQUEST)
         repository_response = await Repository.register(data, session)
@@ -33,12 +35,19 @@ class Service:
             if not token:
                 return APIResponse("Failed to generate verification token", status=StatusCodes.HTTP_500_INTERNAL_SERVER_ERROR)
             verification_link = f"{base_url}/api/v1/email/verify-email?token={token}"
-
-            await AppUtils.send_email(
+            background_tasks.add_task(
+                AppUtils.send_email,
                 subject="Verify your email",
                 recipient=data.email,
                 body=f"Welcome to our app!\n\nPlease verify your email by clicking the following link:\n{verification_link}"
+
+
             )
+            # await AppUtils.send_email(
+            #     subject="Verify your email",
+            #     recipient=data.email,
+            #     body=f"Welcome to our app!\n\nPlease verify your email by clicking the following link:\n{verification_link}"
+            # )
         return APIResponse(status=repository_response.status,
                             message=repository_response.message,
                             data=repository_response.data)
@@ -150,7 +159,7 @@ class Service:
 
 
     @staticmethod
-    async def forgot_password(data: ForgotPasswordRequest, session: Session) -> APIResponse:
+    async def forgot_password(data: ForgotPasswordRequest, session: Session, background_tasks:BackgroundTasks) -> APIResponse:
         user = await Repository.get_user_by_email(data.email, session)
         if not user:
             return APIResponse("User not found", status=StatusCodes.HTTP_404_NOT_FOUND)
@@ -158,16 +167,25 @@ class Service:
         payload = TokenPayload(email=user.data.email,user_id=user.data.user_id,is_active=user.data.email_verified,is_verified=user.data.email_verified)
             
         reset_token = AppUtils.generate_password_reset_token(payload)
+        if not reset_token:
+            return APIResponse("Failed to generate password reset token", status=StatusCodes.HTTP_500_INTERNAL_SERVER_ERROR)
         # send reset token via email
         base_url = SecretUtils.get_secret_value(SecretUtils.SECRETS.CLIENT_BASE_URL)
         reset_link = f"{base_url}/api/v1/email/reset-password?token={reset_token}"
-        await AppUtils.send_email(
+        background_tasks.add_task(
+            AppUtils.send_email,
             subject="Password Reset Request",
             recipient=data.email,
             body=f"To reset your password, please click the following link:\n{reset_link}\n\nIf you did not request this, please ignore this email."
+        
         )
-        if not reset_token:
-            return APIResponse("Failed to generate password reset token", status=StatusCodes.HTTP_500_INTERNAL_SERVER_ERROR)
+        # await AppUtils.send_email(
+        #     subject="Password Reset Request",
+        #     recipient=data.email,
+        #     body=f"To reset your password, please click the following link:\n{reset_link}\n\nIf you did not request this, please ignore this email."
+        
+        # )
+
         return APIResponse(
             message="Password reset link sent to your email",
             data={"reset_link": reset_link},
