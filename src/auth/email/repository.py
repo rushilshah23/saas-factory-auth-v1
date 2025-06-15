@@ -1,55 +1,74 @@
 from src.db import SessionDependency
 from .helpers import RegisterEmailRequest
 from .models import EmailUser
-from src.v1.models import User
-from src.utils import Utils
-from .utils import Utils as EmailUtils
+from .utils import EmailUserUtils
 from src.helpers.response import RepositoryResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, delete
-from src.v1.helpers import UserAuthType
+from src.auth.helpers import UserAuthType
 from typing import Optional
-from src.utils import Utils as AppUtils
+from src.utils.misc import MiscUtils
 from src.helpers.status_codes import StatusCodes
 from datetime import datetime
 from enum import Enum
+from .domain import EmailUserDomain
+from src.auth.repository import GlobalUserRepository 
+from src.auth.domain import GlobalUserDomain
 
-
-
-class Repository:
-    @staticmethod
-    def serialize_model(obj):
-        def serialize(item):
-            if isinstance(item, datetime):
-                return item.isoformat()
-            if isinstance(item, Enum):
-                return item.value
-            return item
-        
-        return {key: serialize(value) for key, value in obj.model_dump().items()}
-    
+class EmailUserRepository:
 
     @staticmethod
-    async def get_user_by_email(email: str, session: AsyncSession) -> RepositoryResponse[EmailUser | None]:
-        result = await session.execute(
+    async def get_user_by_email(email: str, session: AsyncSession) -> RepositoryResponse[EmailUserDomain | None]:
+        query_result = (await session.execute(
             select(EmailUser).where(EmailUser.email == email)
-        )
-        return RepositoryResponse[EmailUser | None](
+        )).scalar_one_or_none()
+
+        if query_result is None:
+            return RepositoryResponse(
+                status=StatusCodes.HTTP_404_NOT_FOUND,
+                message=f"Email user {email} not found",
+                data=None
+            )
+
+        domain_obj = EmailUserDomain.from_model(model_obj=query_result)
+
+        return RepositoryResponse(
             status=StatusCodes.HTTP_200_OK,
             message="User searched successfully",
-            data=result.scalar_one_or_none()
+            data=domain_obj
         )
 
     @staticmethod
-    async def register(data: RegisterEmailRequest, session: AsyncSession) -> RepositoryResponse:
+    async def get_email_user_by_global_user_id(global_user_id: str, session: AsyncSession) -> RepositoryResponse[EmailUserDomain | None]:
+        query_result:EmailUser = (await session.execute(
+            select(EmailUser).where(EmailUser.global_user_id == global_user_id)
+        )).scalar_one_or_none()
+
+        if query_result is None:
+            return RepositoryResponse(
+                status=StatusCodes.HTTP_404_NOT_FOUND,
+                message=f"Email User with global_user_id {global_user_id} doesn't exists",
+                data=None
+            )
+
+        domain_obj = EmailUserDomain.from_model(model_obj=query_result)
+
+        return RepositoryResponse(
+            status=StatusCodes.HTTP_200_OK,
+            message="User searched successfully",
+            data=domain_obj
+        )
+
+    @staticmethod
+    async def create(data: EmailUserDomain, session: AsyncSession) -> RepositoryResponse[EmailUserDomain|None]:
         try:
-            user_exists_response = await Repository.get_user_by_email(data.email, session)
+            user_exists_response = await EmailUserRepository.get_user_by_email(data.email, session)
             if user_exists_response.data:
                 if user_exists_response.data.email_verified is False:
                     return RepositoryResponse(
                     status=StatusCodes.HTTP_208_ALREADY_REPORTED,
                     message="User with this email already exists but not verified",
-                    data={"email_user": Repository.serialize_model(user_exists_response.data)}
+                    data=user_exists_response.data
                 )
                 return RepositoryResponse(
                     status=StatusCodes.HTTP_400_BAD_REQUEST,
@@ -57,23 +76,15 @@ class Repository:
                     data={"email": data.email}
                 )
 
-            new_user = User(
-                id=Utils.generate_uuid(),
-                is_active=True,
-                last_login=None,
-                user_auth_type=UserAuthType.EMAIL,
-                created_at=AppUtils.get_current_timestamp()
-            )
-            session.add(new_user)
-            await session.flush()
+
 
             new_email_user = EmailUser(
-                id=Utils.generate_uuid(),
+                id=data.id,
                 email=data.email,
-                password=EmailUtils.hash_password(data.password),
-                email_verified=False,
-                user_id=new_user.id,
-                password_updated_at=AppUtils.get_current_timestamp()
+                email_verified=data.email_verified,
+                global_user_id=data.global_user_id,
+                password=data.password,
+                password_updated_at=data.password_updated_at
             )
             session.add(new_email_user)
             await session.commit()
@@ -83,14 +94,15 @@ class Repository:
             return RepositoryResponse(
                 status=StatusCodes.HTTP_201_CREATED,
                 message="User data saved successfully",
-                data={"email_user": Repository.serialize_model(new_email_user), "user": Repository.serialize_model(new_user)}
+                data=EmailUserDomain.from_model(new_email_user)
             )
 
         except Exception as e:
+
             await session.rollback()  # <- important
             return RepositoryResponse(
                 status=StatusCodes.HTTP_500_INTERNAL_SERVER_ERROR,
-                message=f"An error occurred: {str(e)}"
+                message=f"EmailUser Repository error - : {str(e)}"
             )
         
     @staticmethod
@@ -102,7 +114,7 @@ class Repository:
                     EmailUser.id == email_user_id
                 )
             )
-            email_user = result.scalar_one_or_none()
+            email_user:EmailUser = result.scalar_one_or_none()
 
             if not email_user:
                 return RepositoryResponse(
@@ -114,7 +126,7 @@ class Repository:
                 return RepositoryResponse(
                     status=StatusCodes.HTTP_400_BAD_REQUEST,
                     message="Email already verified",
-                    data={"email": email_user.email, "user_id": email_user.user_id}
+                    data={"email": email_user.email, "user_id": email_user.id}
                 )
             email_user.email_verified = True
             await session.commit()
@@ -122,7 +134,7 @@ class Repository:
             return RepositoryResponse(
                 status=StatusCodes.HTTP_200_OK,
                 message="Email verified successfully",
-                data={"email": email_user.email, "user_id": email_user.user_id}
+                data={"email": email_user.email, "user_id": email_user.id}
             )
 
         except Exception as e:
@@ -148,7 +160,7 @@ class Repository:
                     data=None
                 )
 
-            email_user.last_login = AppUtils.get_current_timestamp()
+            email_user.last_login = MiscUtils.get_current_timestamp()
             await session.commit()
 
             return RepositoryResponse(
@@ -170,7 +182,7 @@ class Repository:
             result = await session.execute(
                 select(EmailUser).where(EmailUser.email == email)
             )
-            email_user = result.scalar_one_or_none()
+            email_user:EmailUser|None = result.scalar_one_or_none()
 
             if not email_user:
                 return RepositoryResponse(
@@ -179,15 +191,15 @@ class Repository:
                     data=None
                 )
 
-            email_user.password = EmailUtils.hash_password(new_password)
-            email_user.password_updated_at = AppUtils.get_current_timestamp()
+            email_user.password = EmailUserUtils.hash_password(new_password)
+            email_user.password_updated_at = MiscUtils.get_current_timestamp()
 
             await session.commit()
 
             return RepositoryResponse(
                 status=StatusCodes.HTTP_200_OK,
                 message="Password updated successfully",
-                data={"email": email_user.email, "user_id": email_user.user_id}
+                data=EmailUserDomain.from_model(model_obj=email_user).to_dict()
             )
 
         except Exception as e:

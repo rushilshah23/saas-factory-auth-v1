@@ -1,13 +1,14 @@
-from src.utils import Utils as AppUtils
 from src.helpers.response import APIResponse
 from fastapi import HTTPException, Request
 from src.helpers.response import APIResponse
-from src.helpers.token import CookieNames, TokenPayload
+from src.helpers.token import TokenEnum
 from src.helpers.status_codes import StatusCodes
+from src.utils.jwt import JWTUtils
+from src.helpers.token import UserTokenPayload
 
-class Service:
+class GlobalUserService:
 
-    async def authenticate(request:Request):
+    async def authenticate(request:Request)-> APIResponse[UserTokenPayload | None]:
         token = None
 
         auth_header = request.headers.get("Authorization")
@@ -17,17 +18,20 @@ class Service:
         
 
         if not token:
-            token = request.cookies.get(CookieNames.ACCESS_TOKEN.value)
+            token = request.cookies.get(TokenEnum.ACCESS_TOKEN.value)
 
         if not token:
             raise HTTPException(status_code=StatusCodes.HTTP_401_UNAUTHORIZED.value, detail="Missing access token")
 
-        payload = await AppUtils.verify_access_token(token)
+        payload = await JWTUtils.verify_access_token(token=token, expected_token_type=UserTokenPayload)
         if not payload:
             raise HTTPException(status_code=StatusCodes.HTTP_401_UNAUTHORIZED.value, detail="Invalid or expired token")
 
         return APIResponse(
             status=StatusCodes.HTTP_200_OK,
             message="User authenticated successfully",
-            data=payload.to_dict()
+            data=payload
         )
+    
+
+  

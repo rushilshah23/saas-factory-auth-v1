@@ -16,8 +16,8 @@ def create_api():
 
 
 
-    from src.v1 import v1_router
-    api.include_router(v1_router, prefix="/api")
+    from src.auth import router
+    api.include_router(router, prefix="/api")
     
     
     return api

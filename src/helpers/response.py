@@ -1,22 +1,22 @@
 from pydantic import BaseModel
 from typing import Dict, Optional, Generic, TypeVar
 from src.helpers.status_codes import StatusCodes
+T = TypeVar("T")
 
-class APIResponse(BaseModel):
+class APIResponse(BaseModel, Generic[T]):
     status: StatusCodes
     message: str
-    data: Optional[Dict] = None
+    data: Optional[T] = None
 
     def to_dict(self) -> Dict:
         return {
             "status": self.status.value,
             "message": self.message,
-            "data": self.data if self.data is not None else {}
+             "data": self.data.to_dict() if self.data is not None and hasattr(self.data, "to_dict") else self.data
         }
 
 
 
-T = TypeVar("T")
 
 class RepositoryResponse(BaseModel, Generic[T]):
     status: StatusCodes
@@ -27,5 +27,5 @@ class RepositoryResponse(BaseModel, Generic[T]):
         return {
             "status": self.status.value,
             "message": self.message,
-            "data": self.data if self.data is not None else {}
+            "data": self.data.to_dict() if self.data is not None else {}
         }
