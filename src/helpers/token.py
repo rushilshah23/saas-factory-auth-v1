@@ -64,11 +64,13 @@ class EmailUserTokenPayload(UserTokenPayload):
 
 class GoogleUserTokenPayload(UserTokenPayload):
     email: str
+    provider_user_id:str
 
     def to_dict(self):
         result = super().to_dict()
         result.update({
             "email": self.email,
+            "provider_user_id":self.provider_user_id
           
         })
         return result
@@ -81,6 +83,7 @@ class GoogleUserTokenPayload(UserTokenPayload):
             global_user_id=data["global_user_id"],
             exp=data.get("exp"),
             email=data["email"],
+            provider_user_id=data["provider_user_id"],
             user_type=UserAuthType(UserAuthType.GOOGLE.value)
 
         )

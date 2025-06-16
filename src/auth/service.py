@@ -5,6 +5,15 @@ from src.helpers.token import TokenEnum
 from src.helpers.status_codes import StatusCodes
 from src.utils.jwt import JWTUtils
 from src.helpers.token import UserTokenPayload
+from src.db import SessionDependency
+from src.auth.email.repository import EmailUserRepository
+from src.auth.email.domain import EmailUserDomain
+from src.auth.socials.google.repository import GoogleUserRepository
+from src.auth.socials.google.domain import GoogleUserDomain
+from .repository import GlobalUserRepository
+from src.helpers.response import RepositoryResponse
+from src.auth.socials.repository import SocialAuthRepository
+from src.auth.socials.domain import SocialUserDomain
 
 class GlobalUserService:
 
@@ -15,8 +24,8 @@ class GlobalUserService:
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
 
-        
-
+        print("debugg==========")
+        print(request.cookies)
         if not token:
             token = request.cookies.get(TokenEnum.ACCESS_TOKEN.value)
 
@@ -33,5 +42,33 @@ class GlobalUserService:
             data=payload
         )
     
+    @staticmethod
+    async def get_email_globally(email:str, session:SessionDependency):
+        # Check in email users
+        email_repository_response:RepositoryResponse[EmailUserDomain|None] = await EmailUserRepository.get_user_by_email(email=email,session=session)
+        if email_repository_response.status == StatusCodes.HTTP_200_OK and email_repository_response.data is not None:
+            global_user_repository_response = await GlobalUserRepository.get_user_by_global_user_id(email_repository_response.data.global_user_id,session=session)
+            if global_user_repository_response.status == StatusCodes.HTTP_200_OK and global_user_repository_response.data is not None:
+                return APIResponse(
+                    data=global_user_repository_response.data,
+                    message=f"Global user with email - {email} exists",
+                    status=StatusCodes.HTTP_200_OK
+                )
+        # Check in social - google users
+        google_repository_response:RepositoryResponse[GoogleUserDomain|None] = await GoogleUserRepository.get_google_user_by_email(email=email,session=session)
+        if google_repository_response.status == StatusCodes.HTTP_200_OK and google_repository_response.data is not None:
+            social_repository_response = await SocialAuthRepository.get_user_by_social_user_id(social_user_id=google_repository_response.data.social_user_id,session=session)
+            if social_repository_response.status == StatusCodes.HTTP_200_OK and social_repository_response.data is not None:
+                global_user_repository_response = await GlobalUserRepository.get_user_by_global_user_id(social_repository_response.data.global_user_id,session=session)
+                if global_user_repository_response.status == StatusCodes.HTTP_200_OK and global_user_repository_response.data is not None:
+                    return APIResponse(
+                        data=global_user_repository_response.data,
+                        message=f"Global user with email - {email} exists",
+                        status=StatusCodes.HTTP_200_OK
+                    )
 
-  
+        return APIResponse(
+            data=None,
+            message=f"No global user with email Id - {email} found",
+            status=StatusCodes.HTTP_404_NOT_FOUND
+        )

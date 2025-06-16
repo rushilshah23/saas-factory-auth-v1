@@ -13,7 +13,6 @@ from src.helpers.response import APIResponse
 from sqlmodel import Session
 from src.configs.secrets import SecretUtils
 from fastapi import Request
-from src.auth.service import GlobalUserService
 from src.helpers.token import EmailUserTokenPayload, UserTokenPayload, TokenEnum
 from src.helpers.status_codes import StatusCodes
 from fastapi import BackgroundTasks
@@ -281,6 +280,7 @@ class EmailUserService:
     @staticmethod
     async def change_password(request:Request,data: ChangePasswordRequest, session: Session) -> APIResponse:
         # check_old_password
+        from src.auth.service import GlobalUserService
 
         auth_user_api_response:APIResponse = await GlobalUserService.authenticate(request)
         if auth_user_api_response.status != StatusCodes.HTTP_200_OK:

@@ -15,12 +15,16 @@ class GlobalUserDomain:
 
     @staticmethod
     def from_dict(dic: Dict[str, Any]) -> "GlobalUserDomain":
+        print("DEBUG ")
+        print(dic.get("created_at"))
         return GlobalUserDomain(
             id=dic.get("id"),
             user_auth_type=UserAuthType(dic.get("user_auth_type")),
             is_active=dic.get("is_active"),
-            last_login=datetime.fromisoformat(dic.get("last_login")) if dic.get("last_login") else None,
-            created_at=datetime.fromisoformat(dic.get("created_at")) if dic.get("created_at") else None,
+            # last_login=datetime.fromisoformat(dic.get("last_login")) if dic.get("last_login") else None,
+            # created_at=datetime.fromisoformat(dic.get("created_at")) if dic.get("created_at") else None,
+            last_login=dic.get("last_login"),
+            created_at=dic.get("created_at")
         )
 
     def to_dict(self) -> Dict[str, Any]:

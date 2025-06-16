@@ -7,7 +7,6 @@ from .helpers import (
     ChangePasswordRequest
 )
 from .service import EmailUserService
-from src.auth.service import GlobalUserService
 from src.helpers.response import APIResponse
 from fastapi.responses import JSONResponse
 from src.db import SessionDependency
