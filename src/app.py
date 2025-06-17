@@ -18,6 +18,10 @@ def create_api():
 
     from src.auth import router
     api.include_router(router, prefix="/api")
+
+    @api.get("/")
+    async def health_check():
+        return {"message":"Auth API working"}
     
     
     return api

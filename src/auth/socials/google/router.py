@@ -51,23 +51,28 @@ async def login_google() -> JSONResponse:
     )
 
 @router.get("/callback")
-async def auth_google_callback(request:Request, code:str, session: SessionDependency):
+async def auth_google_callback(request: Request, code: str, session: SessionDependency):
+    service_response = await Service.auth_callback(code, session)
 
-    service_response = await Service.auth_callback(code,session)
-    response = JSONResponse( content=service_response.to_dict(),status_code=service_response.status.value)
+    # Redirect to frontend
+    redirect_response = RedirectResponse(url=f"{SecretUtils.get_secret_value(SecretUtils.SECRETS.SERVER_BASE_URL)}")
+
     if service_response.status == StatusCodes.HTTP_201_CREATED:
-        CookieUtils.set_cookie(response, TokenEnum.ACCESS_TOKEN.value, service_response.data.get("tokens").get("access_token"),
-                        expires=int(service_response.data.get('tokens').get("access_token_expiry")))
+        tokens = service_response.data.get("tokens")
 
-        CookieUtils.set_cookie(response, TokenEnum.REFRESH_TOKEN.value, service_response.data.get("tokens").get("refresh_token"),
-                        expires=int(service_response.data.get('tokens').get("refresh_token_expiry")))
-    # return response
-    access_token = service_response.data.get("tokens").get("access_token")
-    refresh_token = service_response.data.get("tokens").get("refresh_token")
-    access_token_expiry = service_response.data.get("tokens").get("access_token_expiry")
-    refresh_token_expiry = service_response.data.get("tokens").get("refresh_token_expiry")
+        # Set tokens in cookies on this redirect response
+        CookieUtils.set_cookie(
+            redirect_response,
+            TokenEnum.ACCESS_TOKEN.value,
+            tokens.get("access_token"),
+            expires=int(tokens.get("access_token_expiry"))
+        )
+        CookieUtils.set_cookie(
+            redirect_response,
+            TokenEnum.REFRESH_TOKEN.value,
+            tokens.get("refresh_token"),
+            expires=int(tokens.get("refresh_token_expiry"))
+        )
 
-    return RedirectResponse(
-        url=f"http://localhost:8000/api/auth/socials/google/success?access={access_token}&refresh={refresh_token}&access_token_expiry={access_token_expiry}&refresh_token_expiry={refresh_token_expiry}"
-    )
+    return redirect_response
     

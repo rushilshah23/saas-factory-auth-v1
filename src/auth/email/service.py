@@ -23,6 +23,7 @@ from .domain import EmailUserDomain
 from .utils import EmailUserUtils
 from .repository import EmailUserRepository
 
+
 class EmailUserService:
     @staticmethod
     async def register(data: RegisterEmailRequest, session: Session, background_tasks: BackgroundTasks) -> APIResponse:
@@ -30,20 +31,26 @@ class EmailUserService:
             return APIResponse(message="Passwords do not match", status=StatusCodes.HTTP_400_BAD_REQUEST)
 
         try:
-            global_user_domain_obj = GlobalUserDomain(
-                id=MiscUtils.generate_uuid(),
-                created_at=MiscUtils.get_current_timestamp(),
-                is_active=False,
-                last_login=None,
-                user_auth_type=UserAuthType.EMAIL
-            )
-            global_user_response = await GlobalUserRepository.create(obj=global_user_domain_obj, session=session)
+            from  src.auth.service import GlobalUserService
+            global_user_email_service_response = await GlobalUserService.get_email_globally(email=data.email, session=session)
+            if global_user_email_service_response.status == StatusCodes.HTTP_200_OK:
+                global_user_domain_obj = global_user_email_service_response.data
+                global_user = global_user_domain_obj
+            else:
+                global_user_domain_obj = GlobalUserDomain(
+                    id=MiscUtils.generate_uuid(),
+                    created_at=MiscUtils.get_current_timestamp(),
+                    is_active=False,
+                    last_login=None,
+                    user_auth_type=UserAuthType.EMAIL
+                )
+                global_user_response = await GlobalUserRepository.create(obj=global_user_domain_obj, session=session)
             
-            if global_user_response.status != StatusCodes.HTTP_201_CREATED or not global_user_response.data:
-                await session.rollback()
-                return APIResponse(message=global_user_response.message, status=StatusCodes.HTTP_500_INTERNAL_SERVER_ERROR)
+                if global_user_response.status != StatusCodes.HTTP_201_CREATED or not global_user_response.data:
+                    await session.rollback()
+                    return APIResponse(message=global_user_response.message, status=StatusCodes.HTTP_500_INTERNAL_SERVER_ERROR)
 
-            global_user = global_user_response.data
+                global_user = global_user_response.data
 
             email_user_domain_obj = EmailUserDomain(
                 id=MiscUtils.generate_uuid(),
