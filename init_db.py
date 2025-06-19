@@ -3,6 +3,7 @@ from src.db import engine
 from src.auth.email.models import EmailUser
 from src.auth.models import GlobalUser
 from src.auth.email.models import EmailUser
+from src.auth.socials.github.models import GithubUser
 import asyncio
 
 # def create_db_and_tables():

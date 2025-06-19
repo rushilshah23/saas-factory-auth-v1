@@ -29,6 +29,12 @@ class SecretUtils:
         GOOGLE_CLIENT_SECRET="GOOGLE_CLIENT_SECRET"
         GOOGLE_REDIRECT_URI="GOOGLE_REDIRECT_URI"
 
+
+        GITHUB_CLIENT_ID="GITHUB_CLIENT_ID"
+        GITHUB_CLIENT_SECRET="GITHUB_CLIENT_SECRET"
+        GITHUB_REDIRECT_URI="GITHUB_REDIRECT_URI"
+
+
     @staticmethod
     def collect_secrets():
         for SECRET in SecretUtils.SECRETS:

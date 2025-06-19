@@ -6,6 +6,7 @@ from .socials import social_router
 from fastapi.responses import JSONResponse
 
 
+
 router = APIRouter(tags=["Auth"] ,prefix="/auth")
 
 
