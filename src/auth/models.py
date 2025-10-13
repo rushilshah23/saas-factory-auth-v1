@@ -9,6 +9,7 @@ from sqlalchemy import Column, DateTime
 
 class GlobalUser(SQLModel, table=True):
     __tablename__ = "global_users"
+    __table_args__ = {"schema": "auth"}  
     id: str = Field(primary_key=True)
     user_auth_type: UserAuthType = Field(nullable=False)
     is_active: bool = Field(default=True, nullable=False)

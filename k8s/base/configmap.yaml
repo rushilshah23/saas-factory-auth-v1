@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-config
+  namespace: auth-service
+  labels:
+    app: auth-service
+    environment: base
+data:
+  # Application Configuration
+  ALGORITHM: "HS256"
+  EMAIL_HOST: "smtp.gmail.com"
+  EMAIL_PORT: "587"
+  EMAIL_USER: "mymail@gmail.com"
+  EMAIL_FROM_NAME: "Auth Service"
+  JWT_ALGORITHM: "HS256"
+  
+  # URLs (Environment specific - will be overridden in overlays)
+  SERVER_BASE_URL: "http://localhost:8000"
+  CLIENT_BASE_URL: "http://localhost:3000"
+  GOOGLE_REDIRECT_URI: "http://localhost:8000/api/auth/socials/google/callback"
+  GITHUB_REDIRECT_URI: "http://localhost:8000/api/auth/socials/github/callback"
+  
+  # Token Expiry (in seconds)
+  JWT_ACCESS_TOKEN_EXPIRE_SECONDS: "40"
+  JWT_REFRESH_TOKEN_RENEW_THRESHOLD_SECONDS: "30"
+  JWT_REFRESH_TOKEN_EXPIRE_SECONDS: "80"
+  
+  # Database Configuration
+  DB_URI: "postgresql+asyncpg://postgres:$(POSTGRES_PASSWORD)@postgres-service:5432/auth"
+  SYNC_DB_URI: "postgresql+psycopg2://postgres:$(POSTGRES_PASSWORD)@postgres-service:5432/auth"

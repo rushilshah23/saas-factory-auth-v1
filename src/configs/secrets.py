@@ -3,6 +3,9 @@ import os
 from typing import Dict, Optional
 from enum import Enum
 import json
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class SecretUtils:
     COLLECTED_SECRETS: Dict[str, str] = {}

@@ -8,9 +8,11 @@ from sqlalchemy import Column, DateTime
 
 class SocialUser(SQLModel, table=True):
     __tablename__ = "social_users"
+    __table_args__ = {"schema": "auth"}  
+
     id: str = Field(primary_key=True)
     provider_user_id:str = Field(unique=True, nullable=False)
-    global_user_id:str = Field(foreign_key="global_users.id")
+    global_user_id:str = Field(foreign_key="auth.global_users.id")
     provider: UserAuthType = Field(nullable=False)
 
 

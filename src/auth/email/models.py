@@ -10,11 +10,13 @@ from sqlalchemy import Column, DateTime
 
 class EmailUser(SQLModel, table=True):
     __tablename__ = "email_users"
+    __table_args__ = {"schema": "auth"}  
+
     id: str = Field(primary_key=True)
     email: str = Field(index=True, unique=True, nullable=False)
     password: str = Field(nullable=False)
     email_verified: bool = Field(default=False)
-    global_user_id: str = Field(foreign_key="global_users.id", nullable=False)
+    global_user_id: str = Field(foreign_key="auth.global_users.id", nullable=False)
     password_updated_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True, default=None)
     )

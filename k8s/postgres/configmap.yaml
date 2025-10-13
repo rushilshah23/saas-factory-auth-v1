@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: auth-service
+data:
+  01-init.sql: |
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    -- Add any additional database initialization here
