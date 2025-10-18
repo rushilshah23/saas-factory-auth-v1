@@ -5,6 +5,7 @@ metadata:
   namespace: auth-ns
   annotations:
     kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/cors-allow-origin: "http://auth.server.com"
     nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
@@ -13,6 +14,10 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-cookie-path: "/ /"
     nginx.ingress.kubernetes.io/proxy-cookie-domain: "auth-service auth.server.com"
 spec:
+  tls:
+    - hosts:
+        - auth.server.com
+      secretName: auth-server-tls   # cert-manager will auto-create this TLS secret
   rules:
     - host: auth.server.com
       http:

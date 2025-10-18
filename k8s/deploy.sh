@@ -1,5 +1,6 @@
 kubectl apply -f ./namespace.yaml
 kubectl apply -f ./secrets/secret.yaml
+kubectl apply -f ./cluster-issuer.yaml
 
 
 
