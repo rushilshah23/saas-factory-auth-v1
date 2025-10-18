@@ -4,6 +4,4 @@ kind: Kustomization
 namespace: auth-service
 
 resources:
-  - namespace.yaml
-  - configmap.yaml
-  - secret.yaml
+  - sealed-secret.yaml

@@ -27,4 +27,4 @@ COPY . .
 EXPOSE 8000
 
 # Use ENTRYPOINT + CMD pattern
-CMD ["sh","run.sh"]
+CMD ["sh","dev.sh"]

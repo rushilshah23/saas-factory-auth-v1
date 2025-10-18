@@ -31,11 +31,16 @@ class GlobalUserService:
 
         if not token:
             token = request.cookies.get(TokenEnum.ACCESS_TOKEN.value)
-
+        print(request.cookies)
+        print("=====================")
         if not token:
             raise HTTPException(status_code=StatusCodes.HTTP_401_UNAUTHORIZED.value, detail="Missing access token")
 
         payload = await JWTUtils.verify_access_token(token=token, expected_token_type=UserTokenPayload)
+        print(payload)
+        if not payload:
+            raise HTTPException(status_code=StatusCodes.HTTP_401_UNAUTHORIZED.value, detail="Failed to retrieve payload ")
+        print(payload)    
         if payload.user_type == UserAuthType.GOOGLE.value:
             payload = GoogleUserTokenPayload.from_dict(payload.to_dict())
         if payload.user_type == UserAuthType.GITHUB.value:

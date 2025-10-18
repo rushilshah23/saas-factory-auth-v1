@@ -56,7 +56,7 @@ async def auth_google_callback(request: Request, code: str, session: SessionDepe
 
     # Redirect to frontend
     redirect_response = RedirectResponse(url=f"{SecretUtils.get_secret_value(SecretUtils.SECRETS.SERVER_BASE_URL)}")
-
+    print(service_response)
     if service_response.status == StatusCodes.HTTP_201_CREATED:
         tokens = service_response.data.get("tokens")
 

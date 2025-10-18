@@ -5,7 +5,8 @@ class CookieUtils:
             key=key,
             value=value,
             httponly=True,
-            secure=True,
+            secure=False,
             samesite="Strict",
-            expires=expires
+            expires=expires,
+            domain="auth.server.com"
         )

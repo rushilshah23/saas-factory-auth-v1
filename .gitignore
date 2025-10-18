@@ -125,3 +125,6 @@ secrets.json
 **/*.env
 
 !**/demo.env
+**/secret.yaml
+
+**/secret_encoded.yaml

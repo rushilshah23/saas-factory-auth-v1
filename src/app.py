@@ -14,12 +14,13 @@ async def lifespan(app:FastAPI):
 def create_api():
     api = FastAPI(title="Authentication Microservice", lifespan=lifespan)
 
-
+    from src.utils.middlwares.log_cookies import log_request_cookies
+    api.middleware("http")(log_request_cookies)
 
     from src.auth import router
     api.include_router(router, prefix="/api")
 
-    @api.get("/")
+    @api.get("/health")
     async def health_check():
         return {"message":"Auth API working"}
     

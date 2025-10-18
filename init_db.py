@@ -5,6 +5,7 @@ from src.auth.models import GlobalUser
 from src.auth.email.models import EmailUser
 from src.auth.socials.github.models import GithubUser
 import asyncio
+from sqlalchemy import text
 
 # def create_db_and_tables():
 #     SQLModel.metadata.create_all(engine)
@@ -15,6 +16,7 @@ import asyncio
 
 async def create_db_and_tables():
     async with engine.begin() as conn:
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS auth"))
         await conn.run_sync(SQLModel.metadata.create_all)
     print("Database and tables created successfully.")
 

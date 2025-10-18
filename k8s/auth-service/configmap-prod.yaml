@@ -13,8 +13,8 @@ data:
   JWT_ACCESS_TOKEN_EXPIRE_SECONDS: "40"
   JWT_REFRESH_TOKEN_RENEW_THRESHOLD_SECONDS: "30"
   JWT_REFRESH_TOKEN_EXPIRE_SECONDS: "80"
-  GOOGLE_REDIRECT_URI: "http://localhost:8000/api/auth/socials/google/callback"
-  GITHUB_REDIRECT_URI: "http://localhost:8000/api/auth/socials/github/callback"
+  GOOGLE_REDIRECT_URI: "http://auth.server.com/api/auth/socials/google/callback"
+  GITHUB_REDIRECT_URI: "http://auth.server.com/api/auth/socials/github/callback"
   # URLs will be set based on environment
-  SERVER_BASE_URL: "http://localhost:8000"
-  CLIENT_BASE_URL: "http://localhost:3000"
+  SERVER_BASE_URL: "http://auth.server.com"
+  CLIENT_BASE_URL: "http://auth.client:3000"

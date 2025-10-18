@@ -185,17 +185,18 @@ class EmailUserService:
     @staticmethod
     async def refresh_token(request:Request, session: Session) -> APIResponse:
         refresh_token = request.cookies.get("refresh_token")
+        access_token = request.cookies.get("access_token")
+        
         if not refresh_token:
             return APIResponse(message="Missing refresh token", status=StatusCodes.HTTP_401_UNAUTHORIZED)
         payload:EmailUserTokenPayload =  JWTUtils.verify_refresh_token(token=refresh_token, expected_token_type=EmailUserTokenPayload)
-        print(refresh_token)
-        print(payload)
+
         if  payload is None:
             return APIResponse(message="Invalid or expired refresh token. Please login again", status=StatusCodes.HTTP_401_UNAUTHORIZED)
         refresh_token_renew_threshold = int(SecretUtils.get_secret_value(SecretUtils.SECRETS.JWT_REFRESH_TOKEN_RENEW_THRESHOLD_SECONDS))
 
 
-        if payload.exp - MiscUtils.get_current_timestamp_numeric() < refresh_token_renew_threshold:
+        if payload.exp - MiscUtils.get_current_timestamp_numeric() < refresh_token_renew_threshold or access_token is None:
             # Regenerate access and refresh tokens
             access_token = JWTUtils.generate_access_token(payload)
             refresh_token = JWTUtils.generate_refresh_token(payload)
